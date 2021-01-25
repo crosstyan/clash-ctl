@@ -30,10 +30,6 @@ func executor(in string) {
 }
 
 func completer(in prompt.Document) []prompt.Suggest {
-	if in.TextBeforeCursor() == "" {
-		return []prompt.Suggest{}
-	}
-
 	args := strings.Split(in.TextBeforeCursor(), " ")
 	w := in.GetWordBeforeCursor()
 
@@ -91,6 +87,8 @@ func main() {
 		completer,
 		prompt.OptionPrefix(">>> "),
 		prompt.OptionTitle("clash-ctl"),
+		prompt.OptionCompletionOnDown(),
+		prompt.OptionShowCompletionAtStart(),
 	)
 	p.Run()
 }
