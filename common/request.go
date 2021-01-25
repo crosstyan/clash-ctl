@@ -9,6 +9,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type HTTPError struct {
+	Message string `json:"message"`
+}
+
 func MakeRequest(s Server) *resty.Client {
 	u := s.URL()
 	client := resty.New().SetHostURL(u.String())

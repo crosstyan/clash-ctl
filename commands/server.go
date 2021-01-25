@@ -122,3 +122,21 @@ func HandleServerCommand(args []string) {
 		fmt.Println("write server success")
 	}
 }
+
+func UseServerResolover(params []string) (int, []common.Node) {
+	if len(params) > 1 {
+		return 0, []common.Node{}
+	}
+
+	cfg, err := common.ReadCfg()
+	if err != nil {
+		return 0, []common.Node{}
+	}
+
+	nodes := []common.Node{}
+	for key := range cfg.Servers {
+		nodes = append(nodes, common.Node{Text: key})
+	}
+
+	return 1, nodes
+}

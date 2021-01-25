@@ -2,6 +2,13 @@ package common
 
 import "github.com/manifoldco/promptui"
 
+type Node struct {
+	Text        string
+	Description string
+	Resolver    func(params []string) (int, []Node)
+	Children    []Node
+}
+
 type Field struct {
 	Name   string
 	Prompt promptui.Prompt

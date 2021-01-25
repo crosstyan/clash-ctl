@@ -12,6 +12,33 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 )
 
+var root = []common.Node{
+	{Text: "now", Description: "show selected clash server"},
+	{Text: "ping", Description: "check clash servers alive"},
+	{Text: "traffic", Description: "get clash traffic"},
+	{Text: "connections", Description: "get clash all connections"},
+	{
+		Text: "server", Description: "manage remote clash server",
+		Children: []common.Node{
+			{Text: "ls", Description: "list all server"},
+			{Text: "add", Description: "add new server"},
+		},
+	},
+	{
+		Text: "proxy", Description: "manage remote clash proxy",
+		Children: []common.Node{
+			{
+				Text: "set", Description: "select a proxy from a group",
+				Resolver: commands.ProxySetResolver,
+			},
+		},
+	},
+	{
+		Text: "use", Description: "change selected clash server",
+		Resolver: commands.UseServerResolover,
+	},
+}
+
 func executor(in string) {
 	in = strings.TrimSpace(in)
 
@@ -26,54 +53,58 @@ func executor(in string) {
 		commands.HandleMiscCommand(blocks)
 	case "traffic", "connections":
 		commands.HandleCommonCommand(blocks)
+	case "proxy":
+		commands.HandleProxyCommand(blocks[1:])
 	}
 }
 
 func completer(in prompt.Document) []prompt.Suggest {
 	args := strings.Split(in.TextBeforeCursor(), " ")
-	w := in.GetWordBeforeCursor()
+	n := root
+	prefixIdx := 0
 
-	// first class command
-	if len(args) <= 1 {
-		return prompt.FilterHasPrefix(
-			[]prompt.Suggest{
-				{Text: "server", Description: "manage remote clash server"},
-				{Text: "now", Description: "show selected clash server"},
-				{Text: "use", Description: "change selected clash server"},
-				{Text: "ping", Description: "check clash servers alive"},
-				{Text: "traffic", Description: "get clash traffic"},
-				{Text: "connections", Description: "get clash all connections"},
-			},
-			w,
-			true,
-		)
-	}
-
-	switch args[0] {
-	case "server":
-		return prompt.FilterHasPrefix(
-			[]prompt.Suggest{
-				{Text: "ls", Description: "list all server"},
-				{Text: "add", Description: "add new server"},
-			},
-			args[1],
-			true,
-		)
-	case "use":
-		cfg, err := common.ReadCfg()
-		if err != nil {
-			return []prompt.Suggest{}
+outside:
+	for i := 0; i < len(args)-1; i++ {
+		var next []common.Node
+		keyword := args[prefixIdx]
+		if keyword == "" {
+			break
 		}
 
-		suggests := []prompt.Suggest{}
-		for key := range cfg.Servers {
-			suggests = append(suggests, prompt.Suggest{Text: key})
+		for _, nd := range n {
+			if nd.Text == keyword {
+				if nd.Resolver != nil {
+					var step int
+					step, n = nd.Resolver(args[prefixIdx+1:])
+					prefixIdx += step
+					break outside
+				} else if len(nd.Children) != 0 {
+					next = nd.Children
+				}
+				break
+			}
 		}
 
-		return suggests
+		prefixIdx++
+		if next == nil {
+			n = nil
+			break
+		}
+
+		n = next
 	}
 
-	return []prompt.Suggest{}
+	suggestions := []prompt.Suggest{}
+	for _, sg := range n {
+		suggestion := prompt.Suggest{Text: sg.Text, Description: sg.Description}
+		suggestions = append(suggestions, suggestion)
+	}
+
+	return prompt.FilterHasPrefix(
+		suggestions,
+		args[prefixIdx],
+		true,
+	)
 }
 
 func main() {
