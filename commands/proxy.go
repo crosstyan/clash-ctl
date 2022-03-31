@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"net/url"
 	"os"
@@ -9,21 +8,21 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cespare/xxhash/v2"
+
 	"github.com/Dreamacro/clash-ctl/common"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 )
 
-func genSha1String(s string) string {
-	h := sha1.New()
-	h.Write([]byte(s))
-	bs := h.Sum(nil)
-	return fmt.Sprintf("%x", bs)
+func genHashString(s string) string {
+	h := xxhash.Sum64String(s)
+	return fmt.Sprintf("%x", h)
 }
 
 func HandleProxyCommand(args []string) {
-	proxiesM, proxies, err := GetProxiesSha1()
+	proxiesM, proxies, err := GetProxiesHash()
 	if len(args) == 0 {
 		return
 	}
@@ -90,7 +89,7 @@ func HandleProxyCommand(args []string) {
 				}
 				if ok {
 					rows = append(rows, table.Row{
-						genSha1String(node.Name)[:4],
+						genHashString(node.Name)[:4],
 						node.Name,
 						node.Type,
 						delay,
@@ -183,14 +182,14 @@ func ProxyListResolver(params []string) (int, []common.Node) {
 	switch len(params) {
 	case 1:
 		// TODO: refactor duplicate code
-		proxiesM, _, err := GetProxiesSha1()
+		proxiesM, _, err := GetProxiesHash()
 		if err != nil {
 			return 0, nodes
 		}
-		for sha1, proxy := range proxiesM {
+		for hashed, proxy := range proxiesM {
 			if proxy.Type == "Selector" {
 				nodes = append(nodes, common.Node{
-					Text:        strings.Replace(sha1, " ", "%20", -1),
+					Text:        strings.Replace(hashed, " ", "%20", -1),
 					Description: fmt.Sprintf("%s select `%s` now", proxy.Name, proxy.Now),
 				})
 			}
@@ -203,7 +202,7 @@ func ProxyListResolver(params []string) (int, []common.Node) {
 
 func ProxySetResolver(params []string) (int, []common.Node) {
 	nodes := []common.Node{}
-	proxiesM, proxies, err := GetProxiesSha1()
+	proxiesM, proxies, err := GetProxiesHash()
 
 	switch len(params) {
 	case 1:
@@ -211,10 +210,10 @@ func ProxySetResolver(params []string) (int, []common.Node) {
 		if err != nil {
 			return 0, nodes
 		}
-		for sha1, proxy := range proxiesM {
+		for hashed, proxy := range proxiesM {
 			if proxy.Type == "Selector" {
 				nodes = append(nodes, common.Node{
-					Text:        sha1,
+					Text:        hashed,
 					Description: fmt.Sprintf("%s select `%s` now", proxy.Name, proxy.Now),
 				})
 			}
@@ -234,7 +233,7 @@ func ProxySetResolver(params []string) (int, []common.Node) {
 				delay = proxy.History[len(proxy.History)-1].Delay
 			}
 			nodes = append(nodes, common.Node{
-				Text:        genSha1String(proxy.Name)[:4],
+				Text:        genHashString(proxy.Name)[:4],
 				Description: fmt.Sprintf("%s %d ms", proxy.Name, delay),
 			})
 		}
@@ -244,14 +243,14 @@ func ProxySetResolver(params []string) (int, []common.Node) {
 	return len(params), nodes
 }
 
-func GetProxiesSha1() (map[string]Proxy, map[string]Proxy, error) {
+func GetProxiesHash() (map[string]Proxy, map[string]Proxy, error) {
 	proxies, err := GetProxies()
 	proxiesMap := map[string]Proxy{}
 	if err != nil {
 		return nil, nil, err
 	}
 	for _, p := range proxies {
-		proxiesMap[genSha1String(p.Name)[:4]] = p
+		proxiesMap[genHashString(p.Name)[:4]] = p
 	}
 
 	return proxiesMap, proxies, nil
