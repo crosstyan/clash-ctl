@@ -28,6 +28,10 @@ var root = []common.Node{
 		Text: "proxy", Description: "manage remote clash proxy",
 		Children: []common.Node{
 			{
+				Text: "ls", Description: "list all proxy",
+				// Resolver: commands.ProxyListResolver,
+			},
+			{
 				Text: "set", Description: "select a proxy from a group",
 				Resolver: commands.ProxySetResolver,
 			},

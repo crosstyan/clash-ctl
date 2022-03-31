@@ -9,4 +9,5 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.0.6
 	github.com/manifoldco/promptui v0.8.0
 	github.com/pelletier/go-toml v1.8.1
+	golang.org/x/tour v0.1.0 // indirect
 )
