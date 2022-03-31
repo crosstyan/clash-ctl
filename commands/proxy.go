@@ -146,18 +146,28 @@ type Proxy struct {
 	} `json:"history"`
 }
 
-// func ProxyListResolver(params []string) (int, []common.Node) {
-// 	nodes := []common.Node{}
-// 	proxiesM, proxies, err := GetProxiesSha1()
-// 	proxiesList := []Proxy{}
+func ProxyListResolver(params []string) (int, []common.Node) {
+	nodes := []common.Node{}
 
-// 	if err != nil {
-// 		fmt.Println(text.FgRed.Sprint(err.Error()))
-// 		return 0, nodes
-// 	}
+	switch len(params) {
+	case 1:
+		proxiesM, _, err := GetProxiesSha1()
+		if err != nil {
+			return 0, nodes
+		}
+		for sha1, proxy := range proxiesM {
+			if proxy.Type == "Selector" {
+				nodes = append(nodes, common.Node{
+					Text:        strings.Replace(sha1, " ", "%20", -1),
+					Description: fmt.Sprintf("select `%s` now", proxy.Name),
+				})
+			}
+		}
+	}
 
-// 	return len(params), nodes
-// }
+	sort.Slice(nodes, func(i, j int) bool { return nodes[i].Description < nodes[j].Description })
+	return len(params), nodes
+}
 
 func ProxySetResolver(params []string) (int, []common.Node) {
 	nodes := []common.Node{}

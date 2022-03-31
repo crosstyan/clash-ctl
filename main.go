@@ -29,7 +29,7 @@ var root = []common.Node{
 		Children: []common.Node{
 			{
 				Text: "ls", Description: "list all proxy",
-				// Resolver: commands.ProxyListResolver,
+				Resolver: commands.ProxyListResolver,
 			},
 			{
 				Text: "set", Description: "select a proxy from a group",
