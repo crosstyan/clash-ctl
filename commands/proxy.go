@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Dreamacro/clash-ctl/common"
 
@@ -128,7 +129,41 @@ func HandleProxyCommand(args []string) {
 		} else {
 			fmt.Println(text.FgGreen.Sprint("Set proxy " + proxy + " to group " + group))
 		}
+	case "delay":
+		wg := sync.WaitGroup{}
+		for _, proxy := range proxies {
+			go speedTest(proxy, server, &wg)
+		}
+		wg.Wait()
 	}
+}
+
+func speedTest(proxy Proxy, server *common.Server, wg *sync.WaitGroup) {
+	wg.Add(1)
+	if proxy.Type == "Vmess" || proxy.Type == "ShadowsocksR" {
+		nameEscaped := url.PathEscape(proxy.Name)
+		req := common.MakeRequest(*server)
+		fail := common.HTTPError{}
+
+		result := struct {
+			Delay int `json:"delay"`
+		}{}
+
+		resp, err := req.R().SetError(&fail).SetResult(&result).SetQueryParams(map[string]string{
+			"timeout": "5000",
+			"url":     "http://www.gstatic.com/generate_204",
+		}).Get("/proxies/" + nameEscaped + "/delay")
+		if err != nil {
+			fmt.Println(text.FgRed.Sprint(err.Error()))
+			return
+		}
+		if resp.IsError() {
+			fmt.Println(text.FgRed.Sprintf("%s \t %s", proxy.Name, fail.Message))
+		} else {
+			fmt.Println(text.FgGreen.Sprintf("%s \t %d ms", proxy.Name, result.Delay))
+		}
+	}
+	wg.Done()
 }
 
 type Proxy struct {
