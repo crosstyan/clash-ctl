@@ -22,6 +22,7 @@ func genSha1String(s string) string {
 }
 
 func HandleProxyCommand(args []string) {
+	proxiesM, proxies, err := GetProxiesSha1()
 	if len(args) == 0 {
 		return
 	}
@@ -39,9 +40,6 @@ func HandleProxyCommand(args []string) {
 
 	switch args[0] {
 	case "ls":
-		proxiesM, proxies, err := GetProxiesSha1()
-		proxiesList := []Proxy{}
-
 		if err != nil {
 			fmt.Println(text.FgRed.Sprint(err.Error()))
 		}
@@ -56,7 +54,6 @@ func HandleProxyCommand(args []string) {
 
 			for i, p := range proxiesM {
 				if p.Type == "Selector" {
-					proxiesList = append(proxiesList, p)
 					rows = append(rows, table.Row{
 						i,
 						p.Name,
@@ -77,12 +74,8 @@ func HandleProxyCommand(args []string) {
 
 			val, ok := proxiesM[params[0]]
 			if !ok {
-				// no shadows. override
-				val = proxies[params[0]]
-				if !ok {
-					fmt.Println(text.FgRed.Sprint("Can't find proxy: " + params[0]))
-					return
-				}
+				fmt.Println(text.FgRed.Sprint("Can't find proxy: " + params[0]))
+				return
 			}
 			if val.Type != "Selector" {
 				fmt.Println(text.FgRed.Sprint("Please select a Selector type instead of nodes"))
@@ -115,15 +108,16 @@ func HandleProxyCommand(args []string) {
 			return
 		}
 
-		group := url.PathEscape(strings.Replace(args[1], "%20", " ", -1))
-		proxy := strings.Replace(args[2], "%20", " ", -1)
+		group := proxiesM[args[1]].Name
+		groupEscaped := url.PathEscape(proxiesM[args[1]].Name)
+		proxy := proxiesM[args[2]].Name
 
 		body := map[string]interface{}{
 			"name": proxy,
 		}
 		fail := common.HTTPError{}
 
-		resp, err := req.R().SetError(&fail).SetBody(body).Put("/proxies/" + group)
+		resp, err := req.R().SetError(&fail).SetBody(body).Put("/proxies/" + groupEscaped)
 		if err != nil {
 			fmt.Println(text.FgRed.Sprint(err.Error()))
 			return
@@ -131,6 +125,8 @@ func HandleProxyCommand(args []string) {
 
 		if resp.IsError() {
 			fmt.Println(text.FgRed.Sprint(fail.Message))
+		} else {
+			fmt.Println(text.FgGreen.Sprint("Set proxy " + proxy + " to group " + group))
 		}
 	}
 }
@@ -151,6 +147,7 @@ func ProxyListResolver(params []string) (int, []common.Node) {
 
 	switch len(params) {
 	case 1:
+		// TODO: refactor duplicate code
 		proxiesM, _, err := GetProxiesSha1()
 		if err != nil {
 			return 0, nodes
@@ -159,7 +156,7 @@ func ProxyListResolver(params []string) (int, []common.Node) {
 			if proxy.Type == "Selector" {
 				nodes = append(nodes, common.Node{
 					Text:        strings.Replace(sha1, " ", "%20", -1),
-					Description: fmt.Sprintf("select `%s` now", proxy.Name),
+					Description: fmt.Sprintf("%s select `%s` now", proxy.Name, proxy.Now),
 				})
 			}
 		}
@@ -171,35 +168,44 @@ func ProxyListResolver(params []string) (int, []common.Node) {
 
 func ProxySetResolver(params []string) (int, []common.Node) {
 	nodes := []common.Node{}
+	proxiesM, proxies, err := GetProxiesSha1()
 
 	switch len(params) {
 	case 1:
-		proxies, err := GetProxies()
+		// TODO: refactor duplicate code
 		if err != nil {
 			return 0, nodes
 		}
-		for name, proxy := range proxies {
+		for sha1, proxy := range proxiesM {
 			if proxy.Type == "Selector" {
 				nodes = append(nodes, common.Node{
-					Text:        strings.Replace(name, " ", "%20", -1),
-					Description: fmt.Sprintf("select `%s` now", proxy.Now),
+					Text:        sha1,
+					Description: fmt.Sprintf("%s select `%s` now", proxy.Name, proxy.Now),
 				})
 			}
 		}
 	case 2:
-		realName := strings.Replace(params[0], "%20", " ", -1)
+		groupName := proxiesM[params[0]].Name
+		realName := strings.Replace(groupName, "%20", " ", -1)
 		group, err := GetProxyGroup(realName)
 		if err != nil {
 			return 0, nodes
 		}
-		for _, proxy := range group.All {
+
+		for _, proxyName := range group.All {
+			proxy := proxies[proxyName]
+			delay := 0
+			if len(proxy.History) > 0 {
+				delay = proxy.History[len(proxy.History)-1].Delay
+			}
 			nodes = append(nodes, common.Node{
-				Text: strings.Replace(proxy, " ", "%20", -1),
+				Text:        genSha1String(proxy.Name)[:4],
+				Description: fmt.Sprintf("%s %d ms", proxy.Name, delay),
 			})
 		}
 	}
 
-	sort.Slice(nodes, func(i, j int) bool { return nodes[i].Text < nodes[j].Text })
+	sort.Slice(nodes, func(i, j int) bool { return nodes[i].Description < nodes[j].Description })
 	return len(params), nodes
 }
 
