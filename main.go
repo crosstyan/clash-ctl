@@ -107,7 +107,7 @@ outside:
 		suggestions = append(suggestions, suggestion)
 	}
 
-	return prompt.FilterHasPrefix(
+	return prompt.FilterFuzzy(
 		suggestions,
 		args[prefixIdx],
 		true,
