@@ -1,0 +1,72 @@
+selected = "clash"
+
+[servers]
+
+  [servers.clash]
+    host = "127.0.0.1"
+    https = false
+    port = "9090"
+    secret = ""
+
+[replace]
+  [replace.hk]
+    from = ["HK", "HKG", "香港"]
+    to = "hk"
+  [replace.jp]
+    from = ["JP", "JPG", "日本"]
+    to = "jp"
+  [replace.tw]
+    from = ["TW", "TWN", "台湾"]
+    to = "tw"
+  [replace.ru]
+    from = ["RU", "RUS", "俄罗斯"]
+    to = "ru"
+  [replace.us]
+    from = ["US", "USA", "美国"]
+    to = "us"
+  [replace.sg]
+    from = ["SG", "SGN", "新加坡"]
+    to = "sg"
+  [replace.au]
+    from = ["AU", "AUS", "澳大利亚"]
+    to = "au"
+  [replace.kr]
+    from = ["KR", "KOR", "韩国"]
+    to = "kr"
+  [replace.ar]
+    from = ["AR", "ARG", "阿根廷"]
+    to = "ar"
+  [replace.br]
+    from = ["BR", "BRA", "巴西"]
+    to = "br"
+  [replace.uk]
+    from = ["UK", "GBR", "英国"]
+    to = "uk"
+  [replace.de]
+    from = ["DE", "DEU", "德国"]
+    to = "de"
+  [replace.tr]
+    from = ["TR", "TUR", "土耳其"]
+    to = "tr"
+  [replace.fr]
+    from = ["FR", "FRA", "法国"]
+    to = "fr"
+  [replace.es]
+    from = ["ES", "ESP", "西班牙"]
+    to = "es"
+  [replace.it]
+    from = ["IT", "ITA", "意大利"]
+    to = "it"
+  [replace.id]
+    from = ["ID", "IDN", "印度尼西亚"]
+    to = "id"
+  [replace.lu]
+    from = ["LU", "LUX", "卢森堡"]
+    to = "lu"
+[regex]
+  [regex.number]
+    pattern = "(?<=\\s)([0-9]*?)(?=\\s)"
+    to = "$&"
+  # [regex.multiplier]
+  #   pattern = "(?<=（)([0-9.]*?)(?=倍率)"
+  #   to = "x$&"
