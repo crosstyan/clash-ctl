@@ -8,18 +8,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cespare/xxhash/v2"
+	"github.com/dlclark/regexp2"
 
 	"github.com/Dreamacro/clash-ctl/common"
+	"github.com/Dreamacro/clash-ctl/utils"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 )
-
-func genHashString(s string) string {
-	h := xxhash.Sum64String(s)
-	return fmt.Sprintf("%x", h)
-}
 
 func HandleProxyCommand(args []string) {
 	proxiesM, proxies, err := GetProxiesHash()
@@ -49,7 +45,7 @@ func HandleProxyCommand(args []string) {
 			t := table.NewWriter()
 			t.SetStyle(table.StyleRounded)
 			t.SetOutputMirror(os.Stdout)
-			t.AppendHeader(table.Row{"Index", "Name", "Type", "Now"})
+			t.AppendHeader(table.Row{"Alias", "Name", "Type", "Now"})
 			rows := []table.Row{}
 
 			for i, p := range proxiesM {
@@ -88,8 +84,9 @@ func HandleProxyCommand(args []string) {
 					delay = node.History[len(node.History)-1].Delay
 				}
 				if ok {
+					alias, _ := getAliasWithConfig(node.Name)
 					rows = append(rows, table.Row{
-						genHashString(node.Name)[:4],
+						alias,
 						node.Name,
 						node.Type,
 						delay,
@@ -156,10 +153,11 @@ func speedTest(proxy Proxy, server *common.Server, wg *sync.WaitGroup) {
 			fmt.Println(text.FgRed.Sprint(err.Error()))
 			return
 		}
+		alias, _ := getAliasWithConfig(proxy.Name)
 		if resp.IsError() {
-			fmt.Println(text.FgRed.Sprintf("%s \t %s", proxy.Name, fail.Message))
+			fmt.Println(text.FgRed.Sprintf("%s \t %s \t %s", alias, proxy.Name, fail.Message))
 		} else {
-			fmt.Println(text.FgGreen.Sprintf("%s \t %d ms", proxy.Name, result.Delay))
+			fmt.Println(text.FgGreen.Sprintf("%s \t %s \t %d ms", alias, proxy.Name, result.Delay))
 		}
 	}
 	wg.Done()
@@ -202,7 +200,7 @@ func ProxyListResolver(params []string) (int, []common.Node) {
 
 func ProxySetResolver(params []string) (int, []common.Node) {
 	nodes := []common.Node{}
-	proxiesM, proxies, err := GetProxiesHash()
+	proxiesA, proxies, err := GetProxiesHash()
 
 	switch len(params) {
 	case 1:
@@ -210,7 +208,7 @@ func ProxySetResolver(params []string) (int, []common.Node) {
 		if err != nil {
 			return 0, nodes
 		}
-		for hashed, proxy := range proxiesM {
+		for hashed, proxy := range proxiesA {
 			if proxy.Type == "Selector" {
 				nodes = append(nodes, common.Node{
 					Text:        hashed,
@@ -219,7 +217,7 @@ func ProxySetResolver(params []string) (int, []common.Node) {
 			}
 		}
 	case 2:
-		groupName := proxiesM[params[0]].Name
+		groupName := proxiesA[params[0]].Name
 		realName := strings.Replace(groupName, "%20", " ", -1)
 		group, err := GetProxyGroup(realName)
 		if err != nil {
@@ -232,8 +230,9 @@ func ProxySetResolver(params []string) (int, []common.Node) {
 			if len(proxy.History) > 0 {
 				delay = proxy.History[len(proxy.History)-1].Delay
 			}
+			alias, _ := getAliasWithConfig(proxy.Name)
 			nodes = append(nodes, common.Node{
-				Text:        genHashString(proxy.Name)[:4],
+				Text:        alias,
 				Description: fmt.Sprintf("%s %d ms", proxy.Name, delay),
 			})
 		}
@@ -243,6 +242,45 @@ func ProxySetResolver(params []string) (int, []common.Node) {
 	return len(params), nodes
 }
 
+func getAlias(proxyName string,
+	replace map[string]common.Replace,
+	regex map[string]common.ReplaceRegex) string {
+	var aliasList []string
+	// The excecution order of serach and replace is random
+	for _, r := range replace {
+		for _, str := range r.From {
+			if strings.Contains(proxyName, str) {
+				aliasList = append(aliasList, r.To)
+				break
+			}
+		}
+	}
+	// The excecution order of regex is random
+	// use priority order to fix that
+	for _, rreg := range regex {
+		r := regexp2.MustCompile(rreg.Pattern, 0)
+		if match, _ := r.FindStringMatch(proxyName); match != nil {
+			str := match.String()
+			final := strings.Replace(rreg.To, "$&", str, -1)
+			if final != rreg.To {
+				aliasList = append(aliasList, final)
+			}
+		}
+	}
+	hashed := utils.GenHashString(proxyName)[:4]
+	aliasList = append(aliasList, hashed)
+	return strings.Join(aliasList, "-")
+}
+
+// If can't read the config file, fallback to hashed name
+func getAliasWithConfig(proxyName string) (string, error) {
+	cfg, err := common.ReadCfg()
+	if err != nil {
+		return utils.GenHashString(proxyName)[:4], err
+	}
+	return getAlias(proxyName, cfg.Replace, cfg.Regex), nil
+}
+
 func GetProxiesHash() (map[string]Proxy, map[string]Proxy, error) {
 	proxies, err := GetProxies()
 	proxiesMap := map[string]Proxy{}
@@ -250,7 +288,8 @@ func GetProxiesHash() (map[string]Proxy, map[string]Proxy, error) {
 		return nil, nil, err
 	}
 	for _, p := range proxies {
-		proxiesMap[genHashString(p.Name)[:4]] = p
+		alias, _ := getAliasWithConfig(p.Name)
+		proxiesMap[alias] = p
 	}
 
 	return proxiesMap, proxies, nil

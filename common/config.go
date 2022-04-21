@@ -47,9 +47,21 @@ func (s Server) WebsocketURL() url.URL {
 	return u
 }
 
+type Replace struct {
+	From []string `toml:"from"`
+	To   string   `toml:"to"`
+}
+
+type ReplaceRegex struct {
+	Pattern string `toml:"pattern"`
+	To      string `toml:"to"`
+}
+
 type Config struct {
-	Servers  map[string]Server `toml:"servers"`
-	Selected string            `toml:"selected"`
+	Servers  map[string]Server       `toml:"servers"`
+	Selected string                  `toml:"selected"`
+	Replace  map[string]Replace      `toml:"replace"`
+	Regex    map[string]ReplaceRegex `toml:"regex"`
 }
 
 // Init create config if not exist
