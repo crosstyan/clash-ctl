@@ -54,38 +54,32 @@ func HandleMiscCommand(args []string) {
 
 		pw := progress.NewWriter()
 		pw.SetAutoStop(true)
-		pw.ShowTime(false)
-		pw.ShowTracker(false)
-		pw.ShowPercentage(false)
 		pw.SetMessageWidth(20)
 		pw.SetSortBy(progress.SortByNone)
 		pw.SetNumTrackersExpected(len(servers))
+		style := progress.StyleVisibilityDefault
+		style.Time = false
+		style.Tracker = false
+		style.Percentage = false
 		pw.SetStyle(progress.Style{
-			Name:  "none",
-			Chars: progress.StyleChars{},
-			Colors: progress.StyleColors{
-				Message: text.Colors{text.FgWhite},
-				Percent: text.Colors{text.FgHiRed},
-				Stats:   text.Colors{text.FgHiBlack},
-				Time:    text.Colors{text.FgGreen},
-				Tracker: text.Colors{text.FgYellow},
-				Value:   text.Colors{text.FgCyan},
-			},
-			Options: progress.StyleOptions{},
+			Name:       "none",
+			Chars:      progress.StyleChars{},
+			Colors:     progress.StyleColorsExample,
+			Visibility: style,
+			Options:    progress.StyleOptions{},
 		})
 		pw.SetTrackerPosition(progress.PositionRight)
 		pw.SetUpdateFrequency(time.Millisecond * 10)
 
-		wg := &sync.WaitGroup{}
+		wg := sync.WaitGroup{}
 		for name, server := range servers {
 			wg.Add(1)
-			go trackPing(wg, pw, name, server)
+			go trackPing(&wg, pw, name, server)
 		}
 
 		pw.Render()
 		wg.Wait()
 	}
-
 }
 
 func trackPing(wg *sync.WaitGroup, pw progress.Writer, name string, server common.Server) {

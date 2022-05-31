@@ -15,7 +15,7 @@ type HTTPError struct {
 
 func MakeRequest(s Server) *resty.Client {
 	u := s.URL()
-	client := resty.New().SetHostURL(u.String())
+	client := resty.New().SetBaseURL(u.String())
 
 	if s.Secret != "" {
 		client.SetHeader("Authorization", fmt.Sprintf("Bearer %s", s.Secret))

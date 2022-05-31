@@ -135,5 +135,4 @@ func HandleCommonCommand(args []string) {
 		t.AppendRows(rows)
 		t.Render()
 	}
-
 }

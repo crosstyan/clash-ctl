@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pelletier/go-toml"
+	"github.com/pelletier/go-toml/v2"
 )
 
 // Name used in $HOME/.config/${Name}
@@ -62,17 +62,17 @@ func Init() error {
 	homeDir = filepath.Join(homeDir, ".config", Name)
 	// initial homedir
 	if _, err := os.Stat(homeDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(homeDir, 0755); err != nil {
-			return fmt.Errorf("Can't create config directory %s: %s", homeDir, err.Error())
+		if err := os.MkdirAll(homeDir, 0o755); err != nil {
+			return fmt.Errorf("can't create config directory %s: %s", homeDir, err.Error())
 		}
 	}
 
 	cfgFile := filepath.Join(homeDir, "ctl.toml")
 	// initial config.yaml
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		f, err := os.OpenFile(cfgFile, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(cfgFile, os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
-			return fmt.Errorf("Can't create file %s: %s", cfgFile, err.Error())
+			return fmt.Errorf("can't create file %s: %s", cfgFile, err.Error())
 		}
 		f.Close()
 	}
@@ -92,6 +92,10 @@ func GetCfgPath() (string, error) {
 
 func ReadCfg() (*Config, error) {
 	cfgFile, err := GetCfgPath()
+	if err != nil {
+		return nil, err
+	}
+
 	buf, err := ioutil.ReadFile(cfgFile)
 	if err != nil {
 		return nil, err
@@ -118,7 +122,7 @@ func SaveCfg(cfg *Config) error {
 		return err
 	}
 
-	return ioutil.WriteFile(cfgPath, buf, 0666)
+	return ioutil.WriteFile(cfgPath, buf, 0o666)
 }
 
 func GetCurrentServer(cfg *Config) (string, *Server, error) {
