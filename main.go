@@ -35,7 +35,7 @@ var root = []common.Node{
 				Text: "delay", Description: "test proxy delay",
 			},
 			{
-				Text: "set", Description: "select a proxy from a group",
+				Text: "set", Description: "Set a proxy to a group",
 				Resolver: commands.ProxySetResolver,
 			},
 		},

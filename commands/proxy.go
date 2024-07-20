@@ -36,9 +36,6 @@ func HandleProxyCommand(args []string) {
 
 	switch args[0] {
 	case "ls":
-		if err != nil {
-			fmt.Println(text.FgRed.Sprint(err.Error()))
-		}
 		params := args[1:]
 		switch len(params) {
 		case 0:
@@ -136,29 +133,27 @@ func HandleProxyCommand(args []string) {
 
 func speedTest(proxy Proxy, server *common.Server, wg *sync.WaitGroup) {
 	wg.Add(1)
-	if proxy.Type == "Vmess" || proxy.Type == "ShadowsocksR" {
-		nameEscaped := url.PathEscape(proxy.Name)
-		req := common.MakeRequest(*server)
-		fail := common.HTTPError{}
+	nameEscaped := url.PathEscape(proxy.Name)
+	req := common.MakeRequest(*server)
+	fail := common.HTTPError{}
 
-		result := struct {
-			Delay int `json:"delay"`
-		}{}
+	result := struct {
+		Delay int `json:"delay"`
+	}{}
 
-		resp, err := req.R().SetError(&fail).SetResult(&result).SetQueryParams(map[string]string{
-			"timeout": "5000",
-			"url":     "http://www.gstatic.com/generate_204",
-		}).Get("/proxies/" + nameEscaped + "/delay")
-		if err != nil {
-			fmt.Println(text.FgRed.Sprint(err.Error()))
-			return
-		}
-		alias, _ := getAliasWithConfig(proxy.Name)
-		if resp.IsError() {
-			fmt.Println(text.FgRed.Sprintf("%s \t %s \t %s", alias, proxy.Name, fail.Message))
-		} else {
-			fmt.Println(text.FgGreen.Sprintf("%s \t %s \t %d ms", alias, proxy.Name, result.Delay))
-		}
+	resp, err := req.R().SetError(&fail).SetResult(&result).SetQueryParams(map[string]string{
+		"timeout": "5000",
+		"url":     "http://www.gstatic.com/generate_204",
+	}).Get("/proxies/" + nameEscaped + "/delay")
+	if err != nil {
+		fmt.Println(text.FgRed.Sprint(err.Error()))
+		return
+	}
+	alias, _ := getAliasWithConfig(proxy.Name)
+	if resp.IsError() {
+		fmt.Println(text.FgRed.Sprintf("%s \t %s \t %s", alias, proxy.Name, fail.Message))
+	} else {
+		fmt.Println(text.FgGreen.Sprintf("%s \t %s \t %d ms", alias, proxy.Name, result.Delay))
 	}
 	wg.Done()
 }

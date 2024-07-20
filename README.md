@@ -100,9 +100,7 @@ Set proxy 🇭🇰 香港 12 CN2 IPv6 to group 🌐 国外流量
 
 Of course `proxy delay` will test all the proxies in the group.
 
-### What is index
+### What is `index`
 
-Index is the firt four hex characters of [SHA1](https://en.wikipedia.org/wiki/SHA-1) of the name.
+Index is the first four hex characters of [xxhash](https://xxhash.com/) of the name.
 Why? Because usually the name of proxy group/node is Chinese characters, even emoji, which is hard to input in terminal.
-
-Firt four hex is pretty enough to prevent duplication I think.
